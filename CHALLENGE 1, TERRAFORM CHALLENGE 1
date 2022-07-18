@@ -1,1 +1,128 @@
 
+Terraform version: 1.1.5 installed on controlplane?
+
+
+Steps to install terraform on Ubuntu / Ubuntu cloud server :
+
+apt-get update -y
+
+Install unzip
+
+sudo apt-get install unzip
+Confirm the latest version number on the terraform website:
+
+https://www.terraform.io/downloads.html
+Download latest version of the terraform (substituting newer version number if needed)
+
+wget https://releases.hashicorp.com/terraform/1.0.7/terraform_1.0.7_linux_amd64.zip
+Extract the downloaded file archive
+
+unzip terraform_1.0.7_linux_amd64.zip
+Move the executable into a directory searched for executables
+
+sudo mv terraform /usr/local/bin/
+Run it
+
+terraform --version 
+
+======================================================
+Configure terraform and provider settings within provider.tf file with following specifications:
+Configure terraform to use hashicorp/kubernetes provider.
+
+Specify the provider's local name: kubernetes
+
+Provider version: 2.11.0
+
+Configure kubernetes provider with path to your kubeconfig file: 
+
+
+terraform {
+  required_providers {
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "=2.11.0"
+    }
+  }
+}
+provider "kubernetes" {
+  config_path = "/root/.kube/config"
+}
+
+
+==============
+Create a terraform resource frontend for kubernetes deployment with following specs:
+Deployment Name: frontend
+
+Deployment Labels = name: frontend
+
+Replicas: 4
+
+Pod Labels = name: webapp
+
+Image: kodekloud/webapp-color:v1
+
+Container name: simple-webapp
+
+Container port: 8080
+
+main.tf
+
+
+root@controlplane ~/terraform_challenge via 💠 default ➜  cat main.tf 
+resource "kubernetes_deployment" "frontend" {
+  metadata {
+    name      = "frontend"
+    namespace = "default"
+    labels = {
+       name = "frontend"
+    }
+  }
+  spec {
+    replicas = 4
+    selector {
+      match_labels = {
+        name = "webapp"
+      }
+    }
+    template {
+      metadata {
+        labels = {
+          name = "webapp"
+        }
+      }
+      spec {
+        container {
+          image = "kodekloud/webapp-color:v1"
+          name  = "simple-webapp"
+          port {
+            container_port = 8080
+          }
+        }
+      }
+    }
+  }
+}
+resource "kubernetes_service" "webapp-service" {
+  metadata {
+    name      = "webapp-service"
+    namespace = "default"
+  }
+  spec {
+    selector = {
+      name = kubernetes_deployment.frontend.metadata.0.labels.name
+    }
+    type = "NodePort"
+    port {
+      node_port   = 30080
+      port        = 8080
+      target_port = 8080
+    }
+  }
+}
+
+
+==========
+
+
+
+Complted...
